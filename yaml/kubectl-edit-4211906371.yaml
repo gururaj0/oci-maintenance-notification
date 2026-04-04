@@ -1,0 +1,59 @@
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+# pods "oracle23c" was not valid:
+# * <nil>: Invalid value: "The edited file failed validation": yaml: line 29: did not find expected key
+#
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{},"creationTimestamp":"2023-10-26T11:15:48Z","labels":{"app":"oracle23c","type":"backend"},"name":"oracle23c","namespace":"webappns","resourceVersion":"38212752","uid":"27ac2972-207f-4272-925d-ce947cf50d5b"},"spec":{"containers":[{"envFrom":[{"configMapRef":{"name":"ora23cconfigmap"}}],"image":"gvenzl/oracle-free","imagePullPolicy":"Always","name":"oracle23c","resources":{},"terminationMessagePath":"/dev/termination-log","terminationMessagePolicy":"File","volumeMounts":[{"mountPath":"/var/run/secrets/kubernetes.io/serviceaccount","name":"kube-api-access-d9528","readOnly":true}]}],"dnsPolicy":"ClusterFirst","enableServiceLinks":true,"nodeName":"10.0.10.72","preemptionPolicy":"PreemptLowerPriority","priority":0,"restartPolicy":"Always","schedulerName":"default-scheduler","securityContext":{},"serviceAccount":"default","serviceAccountName":"default","terminationGracePeriodSeconds":30,"tolerations":[{"effect":"NoExecute","key":"node.kubernetes.io/not-ready","operator":"Exists","tolerationSeconds":300},{"effect":"NoExecute","key":"node.kubernetes.io/unreachable","operator":"Exists","tolerationSeconds":300}],"volumes":[{"name":"kube-api-access-d9528","projected":{"defaultMode":420,"sources":[{"serviceAccountToken":{"expirationSeconds":3607,"path":"token"}},{"configMap":{"items":[{"key":"ca.crt","path":"ca.crt"}],"name":"kube-root-ca.crt"}},{"downwardAPI":{"items":[{"fieldRef":{"apiVersion":"v1","fieldPath":"metadata.namespace"},"path":"namespace"}]}}]}}]},"status":{"conditions":[{"lastProbeTime":null,"lastTransitionTime":"2023-10-26T11:15:48Z","status":"True","type":"Initialized"},{"lastProbeTime":null,"lastTransitionTime":"2023-10-26T11:15:48Z","message":"containers with unready status: [oracle23c]","reason":"ContainersNotReady","status":"False","type":"Ready"},{"lastProbeTime":null,"lastTransitionTime":"2023-10-26T11:15:48Z","message":"containers with unready status: [oracle23c]","reason":"ContainersNotReady","status":"False","type":"ContainersReady"},{"lastProbeTime":null,"lastTransitionTime":"2023-10-26T11:15:48Z","status":"True","type":"PodScheduled"}],"containerStatuses":[{"image":"gvenzl/oracle-free","imageID":"","lastState":{},"name":"oracle23c","ready":false,"restartCount":0,"started":false,"state":{"waiting":{"reason":"ContainerCreating"}}}],"hostIP":"10.0.10.72","phase":"Pending","qosClass":"BestEffort","startTime":"2023-10-26T11:15:48Z"}}
+  creationTimestamp: "2023-10-27T13:07:39Z"
+  labels:
+    app: oracle23c
+    type: backend
+  name: oracle23c
+  namespace: webappns
+  resourceVersion: "61629674"
+  uid: 8a3b6be9-8fc0-4f08-864b-23175c85aa50
+spec:
+  containers:
+  - envFrom:
+    - configMapRef:
+        name: ora23cconfigmap
+    image: gvenzl/oracle-free
+    imagePullPolicy: Always
+    name: oracle23c
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+      - mountPath: /opt/oracle/oradata 
+        name: oracledata
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: 10.0.10.72
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+    - name: oracledata
+      persistentVolumeClaim:
+        claimName: oracleclaim

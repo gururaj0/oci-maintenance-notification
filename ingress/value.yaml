@@ -1,0 +1,21 @@
+controller:
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+    ports:
+      http: 80
+      https: 443
+    annotations:
+      service.beta.kubernetes.io/oci-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+      service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
+      service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "100"
+      service.beta.kubernetes.io/oci-load-balancer-internal: "false"
+      service.beta.kubernetes.io/oci-load-balancer-security-list-management-mode: "None"
+
+  config:
+    use-proxy-protocol: "true"
+    enable-real-ip: "true"
+    proxy-real-ip-cidr: "0.0.0.0/0"
+    allow-snippet-annotations: "true"
+

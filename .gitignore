@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local backups (duplicate snapshots)
+backups/
+
+# Vendored samples / workshops not part of core utilities (remove lines to include)
+fn/
+AI_WORKSHOP_SRC_ROOT/
+
+# Other local trees (not OCI maintenance scripts)
+exams/
+webapp/
+
+# Editor swap
+*.swp

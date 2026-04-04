@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-wear-watch
+  namespace: app-space
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+            nginx.org/proxy-set-headers: "header-a: Guru Header"
+            nginx.org/keepalive: "keepalive"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /wear
+        pathType: Prefix
+        backend:
+          service:
+            name: wear-service
+            port:
+              number: 8080
+      - path: /watch
+        pathType: Prefix
+        backend:
+          service:
+            name: video-service
+            port:
+              number: 8080
+

@@ -1,0 +1,16 @@
+controller:
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+    ports:
+      http: 80
+      https: 443
+    annotations:
+      oci.oraclecloud.com/load-balancer-type: "nlb"      
+      oci-network-load-balancer.oraclecloud.com/internal : "false"
+      oci-network-load-balancer.oraclecloud.com/security-list-management-mode: "None"
+  config:
+    use-proxy-protocol: "true"
+    enable-real-ip: "true"
+    proxy-real-ip-cidr: "0.0.0.0/0"
+    allow-snippet-annotations: "true"
