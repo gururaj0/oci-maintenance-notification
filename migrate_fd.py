@@ -1,6 +1,6 @@
 """
 Author: Gururaj Mohan-Oracle
-Date: 2026-04-02
+Date: 2026-04-03
 
 Planned change only: list active IAAS announcements with type PLANNED_CHANGE, then for each
 affected compute instance move it to another fault domain in the same availability domain and reboot.

@@ -4,6 +4,21 @@ Python utility that lists **active** **IAAS** **`PLANNED_CHANGE`** announcements
 
 **Compute maintenance** is the source of truth (announcements can stay open after work is done or canceled). See the script’s module docstring for full behavior.
 
+## Run every night (recommended)
+
+Schedule **`migrate_fd.py`** to run **daily** (for example **cron**, **systemd timer**, **Kubernetes CronJob**, or **CI**) so that:
+
+- New **PLANNED_CHANGE** announcements and **instance maintenance** state changes are picked up without relying on manual runs.
+- The default **`SKIP_FD_IF_NO_ACTIVE_MAINTENANCE`** behavior avoids repeating fault-domain actions when maintenance is already complete while a **PLANNED_CHANGE** row can still be **ACTIVE**.
+
+Use **dry-run** in automation unless you intentionally set **`EXECUTE_FD_MIGRATE=1`** and accept **`update_instance`** + reboot on matching instances.
+
+Example (**dry-run** once per night at 02:15 — adjust paths and profile):
+
+```bash
+15 2 * * * cd /path/to/clone && OCI_CLI_PROFILE=your_profile /usr/bin/python3 migrate_fd.py >> /var/log/migrate_fd.log 2>&1
+```
+
 ## Requirements
 
 - Python 3.x  
