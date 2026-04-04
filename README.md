@@ -4,6 +4,8 @@ Python utility that lists **active** **IAAS** **`PLANNED_CHANGE`** announcements
 
 **Compute maintenance** is the source of truth (announcements can stay open after work is done or canceled). See the script’s module docstring for full behavior.
 
+**Host placement:** In OCI, **hosts that are scheduled for maintenance are closed for placement** until that work completes. **New VMs** are therefore placed on **hosts outside that maintenance window**—for example hosts that are **already upgraded** or **scheduled for a later** maintenance cycle. Fault-domain moves and reboots are one way to get off a host that is in scope for upcoming platform work.
+
 ## Run every night (recommended)
 
 Schedule **`migrate_fd.py`** to run **daily** (for example **cron**, **systemd timer**, **Kubernetes CronJob**, or **CI**) so that:
