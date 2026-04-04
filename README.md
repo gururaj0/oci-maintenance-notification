@@ -35,3 +35,21 @@ EXECUTE_FD_MIGRATE=1 python3 migrate_fd.py
 | **`OCI_CLI_PROFILE`** | Config profile name. |
 
 Full details, edge cases, and multi-region behavior are documented in **`migrate_fd.py`** at the top of the file.
+
+## Screenshots (Console / maintenance states)
+
+### Active state
+
+![Active state — instance maintenance in progress](images/active-state.png)
+
+### Cancelled state
+
+![Cancelled state](images/cancelled-state.png)
+
+### Instance maintenance status — canceled
+
+![Instance maintenance status — canceled](images/instance-maintenance-status-cancelled.png)
+
+### No fault-domain change (skip / dry-run)
+
+![No FD change](images/no-fd-change.png)
