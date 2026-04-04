@@ -1,34 +1,37 @@
-# Oracle Cloud — planned change & instance maintenance utilities
+# `migrate_fd.py` — OCI planned change & fault-domain migration
 
-Python helpers for **PLANNED_CHANGE** announcements, **Compute instance maintenance** lifecycle checks, and optional **fault-domain migration** with reboot.
+Python utility that lists **active** **IAAS** **`PLANNED_CHANGE`** announcements, then for each affected **compute instance** evaluates **OCI Compute instance maintenance** and optionally moves the VM to another **fault domain** in the same availability domain and **reboots** (`SOFTRESET` / `RESET`).
 
-## Contents
-
-| File | Purpose |
-|------|--------|
-| **`migrate_fd.py`** | Main flow: list IAAS `PLANNED_CHANGE` announcements → per instance, validate maintenance → optional FD change + `SOFTRESET`/`RESET`. |
-| **`migrate_fd_404.py`** | Same logic + regional handling / filters (see its docstring). |
-| **`check_instance_maintenance.py`** | Query and print instance maintenance events (`lifecycle_state`, category, reason). |
-| **`migrate.py`** | Broader migration / announcement utilities. |
-| **`backup_code.sh`** | Local backup of selected project files. |
-| **`SOLUTION.md`** | Solution overview (stale announcements vs Compute, nightly runs, env vars). |
+**Compute maintenance** is the source of truth (announcements can stay open after work is done or canceled). See the script’s module docstring for full behavior.
 
 ## Requirements
 
 - Python 3.x  
 - [`oci`](https://docs.oracle.com/en-us/iaas/tools/python/latest/) Python SDK  
-- Valid **`~/.oci/config`** and API key; use **`OCI_CLI_PROFILE`** to select a profile.
+- Valid **`~/.oci/config`**; set **`OCI_CLI_PROFILE`** to your profile.
 
 ## Quick start
 
 ```bash
 pip install oci
 export OCI_CLI_PROFILE=your_profile
-python3 migrate_fd.py   # dry-run by default
+python3 migrate_fd.py          # dry-run (no API changes)
 ```
 
-See **`SOLUTION.md`** and each script’s module docstring for environment variables (`EXECUTE_FD_MIGRATE`, `OCI_COMPARTMENT_ID`, etc.).
+## Execute (real FD change + reboot)
 
-## License
+```bash
+EXECUTE_FD_MIGRATE=1 python3 migrate_fd.py
+```
 
-Use and modify per your organization’s policy; no license file is included by default.
+## Common environment variables
+
+| Variable | Purpose |
+|----------|--------|
+| **`EXECUTE_FD_MIGRATE`** | `1` / `true` / `yes` to run `update_instance` + reboot; otherwise dry-run. |
+| **`SKIP_FD_IF_NO_ACTIVE_MAINTENANCE`** | Default on: skip execute if no `SCHEDULED`/`STARTED`/`PROCESSING` maintenance. Set to `0` to force (never when maintenance is canceled-only). |
+| **`FD_MIGRATE_REBOOT_ACTION`** | `SOFTRESET` (default) or `RESET`. |
+| **`OCI_COMPARTMENT_ID`** or **`OCI_COMPARTMENT_OCID`** | Limit announcement / maintenance listing scope to a compartment. |
+| **`OCI_CLI_PROFILE`** | Config profile name. |
+
+Full details, edge cases, and multi-region behavior are documented in **`migrate_fd.py`** at the top of the file.
