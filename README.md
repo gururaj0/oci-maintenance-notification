@@ -38,6 +38,10 @@ Full details, edge cases, and multi-region behavior are documented in **`migrate
 
 ## Screenshots (Console / maintenance states)
 
+### Planned change announcement
+
+![PLANNED_CHANGE announcement (Service Health)](images/announcement.png)
+
 ### Active state
 
 ![Active state — instance maintenance in progress](images/active-state.png)
