@@ -33,9 +33,9 @@ Set this up once in the **Console** before you rely on alerts from this script.
 
 Screenshots (example flow):
 
-![Creating an OCI Notifications topic](images/topic-creation.png)
+![Creating an OCI Notifications topic](Topic%20Creation.png)
 
-![Topic subscriptions — Email, Slack, or other protocols](images/subscription.png)
+![Topic subscriptions — Email, Slack, or other protocols](Subscription.png)
 
 ## Quick start
 
