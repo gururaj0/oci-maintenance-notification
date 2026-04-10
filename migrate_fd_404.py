@@ -1,6 +1,6 @@
 """
-Author: Gururaj Mohan-Oracle
-Date: 2026-04-03
+Author: Gururaj Mohan
+Date: 2026-04-02
 
 Planned change only: list active IAAS announcements with type PLANNED_CHANGE, then for each
 affected compute instance move it to another fault domain in the same availability domain and reboot.
@@ -25,7 +25,10 @@ or set compartmentId in ~/.oci/config for your OCI_CLI_PROFILE. If unset, the te
 used (broader scope).
 
   export OCI_COMPARTMENT_ID=ocid1.compartment.oc1...
-  python3 migrate_fd.py
+  python3 migrate_fd_404.py
+
+Test one instance only (still scans PLANNED_CHANGE announcements; skips other resources):
+  INSTANCE_OCID=ocid1.instance... EXECUTE_FD_MIGRATE=1 python3 migrate_fd_404.py
 """
 
 import os
@@ -48,6 +51,7 @@ _SKIP_IF_NO_ACTIVE_ENV = "SKIP_FD_IF_NO_ACTIVE_MAINTENANCE"
 _ACTIVE_MAINTENANCE_STATES = frozenset({"SCHEDULED", "STARTED", "PROCESSING"})
 _CANCELED_MAINTENANCE_STATE = "CANCELED"
 
+# Per-region clients (announcements are tenancy-wide; instance APIs must hit the instance's region).
 _compute_by_region = {}
 _identity_by_region = {}
 
@@ -131,6 +135,7 @@ def _is_compute_instance_ocid(ocid):
 
 
 def _region_from_instance_ocid(ocid):
+    """Region segment in ocid1.instance.oc1.<region>.<ad>... (must match Compute/Identity endpoint)."""
     m = re.match(r"^ocid1\.instance\.oc1\.([a-z0-9-]+)\.", ocid or "")
     return m.group(1) if m else None
 
@@ -222,6 +227,7 @@ def change_fault_domain_and_reboot(instance_id, label, execute, reboot_action):
     try:
         resp0 = cc.get_instance(instance_id)
     except oci.exceptions.ServiceError as e:
+        # Stale announcement (instance terminated), wrong region, or insufficient policy.
         if e.status in (404, 403):
             print(
                 f"  Skip {label}: get_instance failed in Compute region {region} "
@@ -326,9 +332,12 @@ def main():
     execute = _env_truthy(_EXEC_ENV)
     reboot_action = _reboot_action()
     compartment_id = _compartment_scope()
+    instance_filter = os.environ.get("INSTANCE_OCID", "").strip()
 
     print("=== PLANNED_CHANGE announcements only (IAAS, active) ===")
     print(f"Compartment: {compartment_id}")
+    if instance_filter:
+        print(f"INSTANCE_OCID filter: only this instance — {instance_filter}")
     print(f"Execute FD change + reboot: {execute} (set {_EXEC_ENV}=1 to enable)")
     print(f"Reboot action: {reboot_action} ({_REBOOT_ACTION_ENV})")
     print(
@@ -345,6 +354,7 @@ def main():
         print("No PLANNED_CHANGE announcements found.")
         return
 
+    matched_filter = False
     for ann in collection:
         print("--- PLANNED_CHANGE ---")
         print(f"Summary: {ann.summary}")
@@ -365,8 +375,17 @@ def main():
             if not _is_compute_instance_ocid(rid):
                 print(f"  Skip non-instance resource: {label}")
                 continue
+            if instance_filter and rid != instance_filter:
+                continue
+            if instance_filter:
+                matched_filter = True
             change_fault_domain_and_reboot(rid, label, execute, reboot_action)
         print()
+
+    if instance_filter and not matched_filter:
+        print(
+            f"INSTANCE_OCID did not appear in any PLANNED_CHANGE affected resource: {instance_filter}"
+        )
 
 
 if __name__ == "__main__":

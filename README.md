@@ -27,6 +27,8 @@ Example (**dry-run** once per night at 02:15 — adjust paths and profile):
 - [`oci`](https://docs.oracle.com/en-us/iaas/tools/python/latest/) Python SDK  
 - Valid **`~/.oci/config`**; set **`OCI_CLI_PROFILE`** to your profile.
 
+**Related:** **`notify_instance_maintenance.py`** — alerts for upcoming maintenance windows (`time_window_start`) and active maintenance (`STARTED`/`PROCESSING`), including **`time_created`** and instance details. By default it lists maintenance at **tenancy** scope; set **`NOTIFY_TENANCY_SCOPE=0`** to use **`OCI_COMPARTMENT_ID`** / profile compartment only. Listing is **per Compute region** — set **`NOTIFY_REGIONS=us-ashburn-1,us-chicago-1,...`** if VMs span regions. Use **`OCI_NOTIFICATION_TOPIC_OCID`** (OCI Notifications; email via topic subscription). Use **`NOTIFY_DRY_RUN=1`** first.
+
 ## Quick start
 
 ```bash
