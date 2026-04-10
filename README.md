@@ -21,6 +21,22 @@ It does **not** use SMTP; delivery is **OCI Notifications only**.
 - An **OCI Notifications** topic and IAM permission to **publish** to it (for example `ONS_TOPIC_PUBLISH` or equivalent policy on that topic / compartment).  
 - For email: an **Email** subscription on **that same topic**, confirmed (**Active**).
 
+## Create an OCI Notifications topic and subscriptions
+
+Set this up once in the **Console** before you rely on alerts from this script.
+
+1. **Create a topic** — **Developer Services** → **Notifications** → **Topics** → **Create topic** (choose name, compartment, and region).  
+2. **Add subscriptions** on that same topic for each channel you want:
+   - **Email** — add the address; open the **confirmation** message from Oracle and complete confirmation so the subscription shows **Active**.  
+   - **Slack** (or another supported protocol in your tenancy) — create a **Slack** subscription and paste the **incoming webhook URL** (or follow the Console flow for your integration). Confirm the subscription is **Active** when required.  
+3. Copy the topic **OCID** and set **`OCI_NOTIFICATION_TOPIC_OCID`** (or export it in your shell/cron). This script **publishes** to the topic; OCI delivers to **every confirmed subscription** (email, Slack, etc.) on that topic.
+
+Screenshots (example flow):
+
+![Creating an OCI Notifications topic](images/topic-creation.png)
+
+![Topic subscriptions — Email, Slack, or other protocols](images/subscription.png)
+
 ## Quick start
 
 ```bash
