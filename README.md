@@ -1,78 +1,109 @@
-# `migrate_fd.py` — OCI planned change & fault-domain migration
+# `notify_instance_maintenance.py` — OCI Compute maintenance alerts (OCI Notifications)
 
-Python utility that lists **active** **IAAS** **`PLANNED_CHANGE`** announcements, then for each affected **compute instance** evaluates **OCI Compute instance maintenance** and optionally moves the VM to another **fault domain** in the same availability domain and **reboots** (`SOFTRESET` / `RESET`).
+Lists **OCI Compute instance maintenance events** (`list_instance_maintenance_events`), filters by schedule and lifecycle, and **publishes** messages to an **OCI Notifications** topic. Subscribers (for example **Email**) receive the alert according to how the topic is configured in the Console.
 
-**Compute maintenance** is the source of truth (announcements can stay open after work is done or canceled). See the script’s module docstring for full behavior.
+**Author:** Gururaj Mohan-Oracle · **Date:** 2026-04-04
 
-**Host placement:** In OCI, **hosts that are scheduled for maintenance are closed for placement** until that work completes. **New VMs** are therefore placed on **hosts outside that maintenance window**—for example hosts that are **already upgraded** or **scheduled for a later** maintenance cycle. Fault-domain moves and reboots are one way to get off a host that is in scope for upcoming platform work.
+## What it does
 
-## Run every night (recommended)
+- **Upcoming:** `SCHEDULED` events whose `time_window_start` falls within **`NOTIFY_LEAD_HOURS`** (default 48h ahead).
+- **Active:** `STARTED` or `PROCESSING` (when **`NOTIFY_ON_ACTIVE`** is on).
+- Includes instance details when **`get_instance`** succeeds (regional Compute client).
+- **Dedupes** repeated sends per event + phase using a JSON state file (optional).
 
-Schedule **`migrate_fd.py`** to run **daily** (for example **cron**, **systemd timer**, **Kubernetes CronJob**, or **CI**) so that:
-
-- New **PLANNED_CHANGE** announcements and **instance maintenance** state changes are picked up without relying on manual runs.
-- The default **`SKIP_FD_IF_NO_ACTIVE_MAINTENANCE`** behavior avoids repeating fault-domain actions when maintenance is already complete while a **PLANNED_CHANGE** row can still be **ACTIVE**.
-
-Use **dry-run** in automation unless you intentionally set **`EXECUTE_FD_MIGRATE=1`** and accept **`update_instance`** + reboot on matching instances.
-
-Example (**dry-run** once per night at 02:15 — adjust paths and profile):
-
-```bash
-15 2 * * * cd /path/to/clone && OCI_CLI_PROFILE=your_profile /usr/bin/python3 migrate_fd.py >> /var/log/migrate_fd.log 2>&1
-```
+It does **not** use SMTP; delivery is **OCI Notifications only**.
 
 ## Requirements
 
 - Python 3.x  
 - [`oci`](https://docs.oracle.com/en-us/iaas/tools/python/latest/) Python SDK  
-- Valid **`~/.oci/config`**; set **`OCI_CLI_PROFILE`** to your profile.
-
-**Related:** **`notify_instance_maintenance.py`** — alerts for upcoming maintenance windows (`time_window_start`) and active maintenance (`STARTED`/`PROCESSING`), including **`time_created`** and instance details. By default it lists maintenance at **tenancy** scope; set **`NOTIFY_TENANCY_SCOPE=0`** to use **`OCI_COMPARTMENT_ID`** / profile compartment only. Listing is **per Compute region** — set **`NOTIFY_REGIONS=us-ashburn-1,us-chicago-1,...`** if VMs span regions. Use **`OCI_NOTIFICATION_TOPIC_OCID`** (OCI Notifications; email via topic subscription). Use **`NOTIFY_DRY_RUN=1`** first.
+- Valid **`~/.oci/config`** (or **`OCI_CONFIG_FILE`**) with profile **`OCI_CLI_PROFILE`** (script default profile is `ORASENATDPLTINTEGRATION03` if unset).  
+- An **OCI Notifications** topic and IAM permission to **publish** to it (for example `ONS_TOPIC_PUBLISH` or equivalent policy on that topic / compartment).  
+- For email: an **Email** subscription on **that same topic**, confirmed (**Active**).
 
 ## Quick start
 
 ```bash
 pip install oci
 export OCI_CLI_PROFILE=your_profile
-python3 migrate_fd.py          # dry-run (no API changes)
+# Set your topic (recommended — script may ship with a default topic OCID for override/testing)
+export OCI_NOTIFICATION_TOPIC_OCID=ocid1.onstopic.oc1...
+
+python3 notify_instance_maintenance.py
 ```
 
-## Execute (real FD change + reboot)
+Use **`NOTIFY_DRY_RUN=1`** first to print what would be sent without publishing.
+
+## Test topic + email without maintenance events
+
+Publishing is skipped when **`NOTIFY_DRY_RUN=1`** — you will **not** get email.
 
 ```bash
-EXECUTE_FD_MIGRATE=1 python3 migrate_fd.py
+# Real publish to ONS (triggers email if subscription is on this topic)
+unset NOTIFY_DRY_RUN
+export NOTIFY_SEND_TEST=1
+python3 notify_instance_maintenance.py
 ```
 
-## Common environment variables
+**`NOTIFY_SEND_TEST=1`** skips maintenance listing and sends a short canned message. Use this to verify IAM, region, and email subscription.
 
-| Variable | Purpose |
-|----------|--------|
-| **`EXECUTE_FD_MIGRATE`** | `1` / `true` / `yes` to run `update_instance` + reboot; otherwise dry-run. |
-| **`SKIP_FD_IF_NO_ACTIVE_MAINTENANCE`** | Default on: skip execute if no `SCHEDULED`/`STARTED`/`PROCESSING` maintenance. Set to `0` to force (never when maintenance is canceled-only). |
-| **`FD_MIGRATE_REBOOT_ACTION`** | `SOFTRESET` (default) or `RESET`. |
-| **`OCI_COMPARTMENT_ID`** or **`OCI_COMPARTMENT_OCID`** | Limit announcement / maintenance listing scope to a compartment. |
-| **`OCI_CLI_PROFILE`** | Config profile name. |
+## OCI Notifications
 
-Full details, edge cases, and multi-region behavior are documented in **`migrate_fd.py`** at the top of the file.
+| Item | Notes |
+|------|--------|
+| **`OCI_NOTIFICATION_TOPIC_OCID`** | Topic OCID. Optional if the script defines a default; **always set this to your topic** in production so publishes match your Console subscriptions. |
+| **`OCI_NOTIFICATION_REGION`** | Home region of the topic if not inferable from the OCID or config `region`. |
+| **`ONS_TOPIC_OCID`** | Alternate env name accepted for the topic OCID. |
 
-## Screenshots (Console / maintenance states)
+Email is **not** sent by this script directly; it arrives only if the topic has an **Email** subscription and the address is **confirmed**.
 
-### Planned change announcement
+## Listing scope and tenancy
 
-![PLANNED_CHANGE announcement (Service Health)](images/announcement.png)
+The **tenancy OCID** comes from **`tenancy=`** in your **`~/.oci/config`** profile (loaded by the OCI SDK).
 
-### Active state
+| `NOTIFY_TENANCY_SCOPE` | Scope passed to the API |
+|------------------------|-------------------------|
+| **On** (default if unset) | **`config['tenancy']`** — tenancy root |
+| **Off** (`0` / `false` / `no`) | **`OCI_COMPARTMENT_ID`** or **`OCI_COMPARTMENT_OCID`** (environment), then profile **`compartment_id`** or **`compartmentId`**, else tenancy OCID |
 
-![Active state — instance maintenance in progress](images/active-state.png)
+**Note:** `OCI_COMPARTMENT_ID` is an **environment** variable name. Inside the config file the usual key is **`compartment_id=`**, not `OCI_COMPARTMENT_ID`.
 
-### Cancelled state
+## Regions (important)
 
-![Cancelled state](images/cancelled-state.png)
+**Instance maintenance listing is per Compute region.** If you only query the profile’s home region, you may see **no events** while VMs exist in other regions.
 
-### Instance maintenance status — canceled
+```bash
+export NOTIFY_REGIONS=us-ashburn-1,us-chicago-1,us-phoenix-1
+python3 notify_instance_maintenance.py
+```
 
-![Instance maintenance status — canceled](images/instance-maintenance-status-cancelled.png)
+You can also set **`OCI_REGIONS`** as an alias for the same comma-separated list (`NOTIFY_REGIONS` is checked first).
 
-### No fault-domain change (skip / dry-run)
+## Environment variables (behavior)
 
-![No FD change](images/no-fd-change.png)
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| **`NOTIFY_LEAD_HOURS`** | `48` | For `SCHEDULED`: notify if `time_window_start` is within this many hours (and still in the future). |
+| **`NOTIFY_ON_SCHEDULED`** | on | Remind for qualifying `SCHEDULED` events. |
+| **`NOTIFY_ON_ACTIVE`** | on | Notify for `STARTED` / `PROCESSING`. |
+| **`NOTIFY_DEDUPE`** | on | Skip repeats using state file; set `0` to always notify. |
+| **`NOTIFY_STATE_FILE`** | `~/.oci/maintenance_notify_state.json` | Dedupe state path. |
+| **`NOTIFY_DRY_RUN`** | off | Print only; **no** publish to Notifications. |
+| **`NOTIFY_SEND_TEST`** | off | One test publish; skips maintenance listing. |
+| **`INSTANCE_OCID`** | — | Limit listing to one instance. |
+| **`LIFECYCLE_STATE_FILTER`** | — | Optional: `SCHEDULED`, `STARTED`, … (server-side filter). |
+
+## Scheduling (example)
+
+```bash
+0 * * * * cd /path/to/repo && OCI_CLI_PROFILE=your_profile /usr/bin/python3 notify_instance_maintenance.py >> /var/log/notify_maintenance.log 2>&1
+```
+
+## Troubleshooting
+
+- **No email after a successful publish:** Topic OCID must **match** the topic where you created the subscription; confirm subscription **Active**; check spam; **`NOTIFY_DRY_RUN`** must be **off** for real sends.  
+- **403 / publish errors:** IAM policy must allow the config **user** (or dynamic group) to publish to that topic.  
+- **Wrong region:** Set **`OCI_NOTIFICATION_REGION`** to the topic’s region.  
+- **Empty maintenance list:** Expand **`NOTIFY_REGIONS`**; confirm **`NOTIFY_TENANCY_SCOPE`** and compartment envs match where instances live.
+
+For the latest behavior and defaults, see the module docstring at the top of **`notify_instance_maintenance.py`**.
